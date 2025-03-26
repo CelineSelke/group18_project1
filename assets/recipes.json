@@ -1,0 +1,17 @@
+[
+    {
+      "title": "Pasta",
+      "ingredients": "Pasta, Tomato, Cheese",
+      "instructions": "Boil pasta..."
+    },
+    {
+      "title": "Pancakes",
+      "ingredients": "Flour, Eggs, Milk",
+      "instructions": "Mix and fry..."
+    },
+    {
+      "title": "Omelette",
+      "ingredients": "Eggs, Milk, Salt",
+      "instructions": "Beat eggs..."
+    }
+  ]

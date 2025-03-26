@@ -19,6 +19,22 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/* Recipe Detail Implementation Kinda
+class RecipeDetail extends StatefulWidget {
+  const RecipeDetail({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State<RecipeDetail> createState() => _RecipeDetailState();
+}
+
+class _RecipeDetailState extends State<RecipeDetail> {
+  
+
+}
+*/
+
 class RecipeBook extends StatefulWidget {
   const RecipeBook({super.key, required this.title});
 
@@ -29,31 +45,25 @@ class RecipeBook extends StatefulWidget {
 }
 
 class _RecipeBookState extends State<RecipeBook> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  final DatabaseHelper dbHelper = DatabaseHelper();
+  late Future<void> _initDbFuture; // Add this line
 
   @override
   void initState() {
     super.initState();
-    _initializeDatabase();
+    _initDbFuture = dbHelper.init(); // Initialize database here
   }
 
-  Future<void> _initializeDatabase() async {
-    await _databaseHelper.insert({
-      DatabaseHelper.columnTitle: 'Pasta',
-      DatabaseHelper.columnIngredients: 'Pasta, Tomato, Cheese',
-      DatabaseHelper.columnInstructions: 'Boil pasta...',
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        backgroundColor: Color(0xFF105068),
+        title: Text("Recipes", style: TextStyle(color:Colors.white)),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _databaseHelper.queryAllRecipes(),
+        future: _initDbFuture.then((_) => dbHelper.queryAllRecipes()),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -68,14 +78,26 @@ class _RecipeBookState extends State<RecipeBook> {
             itemBuilder: (context, index) {
               final recipe = snapshot.data![index];
               return Card(
+                color: Color(0xFF5d8aa6),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
                 margin: EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(recipe[DatabaseHelper.columnTitle]),
-                  subtitle: Text(recipe[DatabaseHelper.columnIngredients]),
-                  trailing: Icon(Icons.arrow_forward),
-                  onTap: () {
-                    // Navigate to recipe detail page
-                  },
+                child: Container(
+                height: 80,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ListTile(
+                    title: Text(
+                      recipe[DatabaseHelper.columnTitle],
+                      style: TextStyle(color: Colors.white)
+                    ),
+                    subtitle: Text(""),
+                    trailing: Icon(Icons.arrow_forward),
+                    onTap: () {
+                      // Navigate to recipe detail page
+                    },
+                  ),
                 ),
               );
             },

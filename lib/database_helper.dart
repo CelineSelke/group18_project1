@@ -12,7 +12,10 @@ class DatabaseHelper {
   static const columnTitle = 'title';
   static const columnIngredients = 'ingredients';
   static const columnInstructions = 'instructions';
-  //Add ImageURL, cook time, vegan/gluten free tag
+  static const columnImageURL = 'imageURL';
+  static const columnCookTime = 'cooktime';
+  static const columnVegan = 'vegan';
+  static const columnGluten = 'gluten';
   late Database _db;
   late Future<void> _initialization;
 
@@ -27,6 +30,12 @@ class DatabaseHelper {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 3) {
+          await db.execute('DROP TABLE IF EXISTS $table');
+          await _onCreate(db, newVersion);
+        }
+      },
     );
   }
 
@@ -36,7 +45,11 @@ class DatabaseHelper {
       $columnId INTEGER PRIMARY KEY,
       $columnTitle TEXT NOT NULL,
       $columnIngredients TEXT NOT NULL,
-      $columnInstructions TEXT NOT NULL
+      $columnInstructions TEXT NOT NULL,
+      $columnImageURL TEXT NOT NULL,
+      $columnCookTime TEXT NOT NULL,
+      $columnVegan INTEGER NOT NULL,
+      $columnGluten INTEGER NOT NULL
     )
     ''');
     final jsonString = await rootBundle.loadString('assets/recipes.json');
@@ -45,13 +58,19 @@ class DatabaseHelper {
   }
 
   Future<void> _insertDefaultRecipes(Database db, List<dynamic> recipes) async {
+    final batch = db.batch();
     for (final recipe in recipes) {
-      await db.insert(table, {
+      batch.insert(table, {
         columnTitle: recipe['title'],
         columnIngredients: recipe['ingredients'],
         columnInstructions: recipe['instructions'],
+        columnImageURL: recipe['imageURL'],
+        columnCookTime: recipe['cooktime'],
+        columnVegan: recipe['vegan'],
+        columnGluten: recipe['gluten']
       });
     }
+    await batch.commit(noResult: true);
   }
 
 

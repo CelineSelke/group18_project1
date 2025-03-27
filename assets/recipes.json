@@ -2,16 +2,28 @@
     {
       "title": "Pasta",
       "ingredients": "Pasta, Tomato, Cheese",
-      "instructions": "Boil pasta..."
+      "instructions": "Boil pasta...",
+      "imageURL": "pasta.jpg",
+      "cooktime": "2 hours",
+      "vegan": 0,
+      "gluten": 0
     },
     {
       "title": "Pancakes",
       "ingredients": "Flour, Eggs, Milk",
-      "instructions": "Mix and fry..."
+      "instructions": "Mix and fry...",
+      "imageURL": "pancakes.jpg",
+      "cooktime": "30 minutes",
+      "vegan": 0,
+      "gluten": 0
     },
     {
       "title": "Omelette",
       "ingredients": "Eggs, Milk, Salt",
-      "instructions": "Beat eggs..."
+      "instructions": "Beat eggs...",
+      "imageURL": "omelette.jpg",
+      "cooktime": "1 hour",
+      "vegan": 0,
+      "gluten": 1
     }
   ]

@@ -2,7 +2,50 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MaterialApp(
+      builder: (context, child) {
+        return Scaffold(
+          body: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 60),
+                child: child!,
+              ),
+              const Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: AppFooter(),
+              ),
+            ],
+          ),
+        );
+      },
+      home: MyApp(),
+    ),
+  );
+}
+
+class AppFooter extends StatelessWidget {
+  const AppFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 70,
+      color: Color(0xFF504887),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Icon(Icons.search, color: Colors.white, size: 35),
+          Icon(Icons.favorite, color: Colors.white, size: 35),
+          Icon(Icons.calendar_month, color: Colors.white, size: 35),
+          Icon(Icons.shopping_cart, color: Colors.white, size: 35),
+        ],
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -12,7 +55,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Recipe Book',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.light(),
       ),
       home: const RecipeBook(title: 'Recipe Book'),
     );
@@ -46,12 +89,17 @@ class RecipeBook extends StatefulWidget {
 
 class _RecipeBookState extends State<RecipeBook> {
   final DatabaseHelper dbHelper = DatabaseHelper();
-  late Future<void> _initDbFuture; // Add this line
+  late Future<List<Map<String, dynamic>>> _recipesFuture;
 
   @override
   void initState() {
     super.initState();
-    _initDbFuture = dbHelper.init(); // Initialize database here
+    _recipesFuture = _initializeData(); // Initialize database here
+  }
+
+  Future<List<Map<String, dynamic>>> _initializeData() async {
+    await dbHelper.init();
+    return dbHelper.queryAllRecipes();
   }
 
 
@@ -63,46 +111,90 @@ class _RecipeBookState extends State<RecipeBook> {
         title: Text("Recipes", style: TextStyle(color:Colors.white)),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _initDbFuture.then((_) => dbHelper.queryAllRecipes()),
+        future: _recipesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No recipes found'));
+            return const Center(child: CircularProgressIndicator());
           }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final recipe = snapshot.data![index];
-              return Card(
-                color: Color(0xFF5d8aa6),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(0),
-                ),
-                margin: EdgeInsets.all(8),
-                child: Container(
-                height: 80,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ListTile(
-                    title: Text(
-                      recipe[DatabaseHelper.columnTitle],
-                      style: TextStyle(color: Colors.white)
-                    ),
-                    subtitle: Text(""),
-                    trailing: Icon(Icons.arrow_forward),
-                    onTap: () {
-                      // Navigate to recipe detail page
-                    },
-                  ),
-                ),
-              );
-            },
-          );
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final recipes = snapshot.data ?? [];
+          if (recipes.isEmpty) {
+            return const Center(child: Text('No recipes found'));
+          }
+          return _RecipeListView(recipes: recipes);
         },
+      ),
+    );
+  }
+}
+
+class _RecipeListView extends StatelessWidget {
+  final List<Map<String, dynamic>> recipes;
+  const _RecipeListView({required this.recipes});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: recipes.length,
+      itemBuilder: (context, index) {
+        final recipe = recipes[index];
+        return _RecipeCard(recipe: recipe);
+      },
+    );
+  }
+}
+
+class _RecipeCard extends StatelessWidget {
+  final Map<String, dynamic> recipe;
+  const _RecipeCard({required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF5d8aa6),
+      margin: const EdgeInsets.all(8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(0),
+      ),
+      child: SizedBox(
+        height: 80,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          leading: Transform.translate(
+            offset: const Offset(0, 2),
+            child: _buildImage(),
+          ),
+          title: Text(
+            recipe[DatabaseHelper.columnTitle],
+            style: const TextStyle(color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            "Cook Time: ${recipe[DatabaseHelper.columnCookTime]}",
+            style: const TextStyle(color: Colors.white70),
+          ),
+          trailing: const Icon(Icons.favorite, color: Colors.red, size: 50),
+          onTap: () {
+            // Navigate to recipe detail page
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    return Container(
+      width: 60, 
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        image: DecorationImage(
+          image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

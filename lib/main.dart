@@ -22,7 +22,10 @@ void main() {
           ),
         );
       },
-      home: MyApp(),
+      home: const RecipeBook(title: 'Recipe Book'),
+      routes: {
+        '/recipeBook': (context) => const RecipeBook(title: 'Recipes'),
+      },
     ),
   );
 }
@@ -35,10 +38,23 @@ class AppFooter extends StatelessWidget {
     return Container(
       height: 70,
       color: Color(0xFF504887),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Icon(Icons.search, color: Colors.white, size: 35),
+          GestureDetector(
+            onTap: () {
+              //DOESN'T WORK WILL FIX LATER
+              final currentRoute = ModalRoute.of(context)?.settings.name;
+              if (currentRoute != '/recipeBook') {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/recipeBook',
+                  (Route<dynamic> route) => false,
+                );
+              }
+            },
+            child: Icon(Icons.search, color: Colors.white, size: 35),
+          ),
           Icon(Icons.favorite, color: Colors.white, size: 35),
           Icon(Icons.calendar_month, color: Colors.white, size: 35),
           Icon(Icons.shopping_cart, color: Colors.white, size: 35),
@@ -62,10 +78,9 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/* Recipe Detail Implementation Kinda
 class RecipeDetail extends StatefulWidget {
-  const RecipeDetail({super.key, required this.title});
-
+  const RecipeDetail({super.key, required this.title, required this.recipe});
+  final Map<String, dynamic> recipe;
   final String title;
 
   @override
@@ -73,10 +88,67 @@ class RecipeDetail extends StatefulWidget {
 }
 
 class _RecipeDetailState extends State<RecipeDetail> {
-  
-
+  @override
+  Widget build(BuildContext context) {
+    final recipe = widget.recipe;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF105068),
+        title: Text(widget.title, style: TextStyle(color:Colors.white)),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [ 
+                Container(
+                  width: 120, 
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(recipe[DatabaseHelper.columnTitle], style: TextStyle(fontSize: 24)),
+                      Text("Cook Time: ${recipe[DatabaseHelper.columnCookTime]}", style: TextStyle(fontSize: 20))
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text("Ingredients", style: TextStyle(fontSize: 28)),
+                SizedBox(height: 4),
+                Text(recipe[DatabaseHelper.columnIngredients], style: TextStyle(fontSize: 16)),
+                SizedBox(height: 12),
+                Text("Directions", style: TextStyle(fontSize: 28)),
+                SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(recipe[DatabaseHelper.columnInstructions], style: TextStyle(fontSize: 16)),
+                ),
+              ]
+            )
+          ],
+        ),
+      ),
+    );
+  }
 }
-*/
 
 class RecipeBook extends StatefulWidget {
   const RecipeBook({super.key, required this.title});
@@ -178,7 +250,9 @@ class _RecipeCard extends StatelessWidget {
           ),
           trailing: const Icon(Icons.favorite, color: Colors.red, size: 50),
           onTap: () {
-            // Navigate to recipe detail page
+            Navigator.push(context, MaterialPageRoute(
+              builder: (context) => RecipeDetail(title: recipe[DatabaseHelper.columnTitle], recipe: recipe)
+            ));
           },
         ),
       ),

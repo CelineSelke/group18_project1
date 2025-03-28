@@ -218,6 +218,24 @@ class _RecipeListView extends StatelessWidget {
   }
 }
 
+class _FavoriteListView extends StatelessWidget {
+  final List<Map<String, dynamic>> recipes;
+  const _FavoriteListView({required this.recipes});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: recipes.length,
+      itemBuilder: (context, index) {
+        final recipe = recipes[index];
+        if(recipes[index][DatabaseHelper.columnFavorite] == 1){
+          return _RecipeCard(recipe: recipe);
+        }
+      },
+    );
+  }
+}
+
 class _RecipeCard extends StatelessWidget {
   final Map<String, dynamic> recipe;
   const _RecipeCard({required this.recipe});
@@ -248,7 +266,15 @@ class _RecipeCard extends StatelessWidget {
             "Cook Time: ${recipe[DatabaseHelper.columnCookTime]}",
             style: const TextStyle(color: Colors.white70),
           ),
-          trailing: const Icon(Icons.favorite, color: Colors.red, size: 50),
+          trailing: IconButton(
+            onPressed: () async {
+              final newFavoriteValue = recipe[DatabaseHelper.columnFavorite] == "0" ? "1" : "0";
+
+              await DatabaseHelper().updateFavoriteStatus(recipe['id'], newFavoriteValue);
+
+            },
+            icon: Icon(Icons.favorite, color: recipe[DatabaseHelper.columnFavorite] == 0 ? Colors.white : Colors.red, size: 50)
+          ),
           onTap: () {
             Navigator.push(context, MaterialPageRoute(
               builder: (context) => RecipeDetail(title: recipe[DatabaseHelper.columnTitle], recipe: recipe)

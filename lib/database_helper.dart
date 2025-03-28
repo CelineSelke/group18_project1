@@ -16,6 +16,7 @@ class DatabaseHelper {
   static const columnCookTime = 'cooktime';
   static const columnVegan = 'vegan';
   static const columnGluten = 'gluten';
+  static const columnFavorite = 'favorite';
   late Database _db;
   late Future<void> _initialization;
 
@@ -49,7 +50,8 @@ class DatabaseHelper {
       $columnImageURL TEXT NOT NULL,
       $columnCookTime TEXT NOT NULL,
       $columnVegan INTEGER NOT NULL,
-      $columnGluten INTEGER NOT NULL
+      $columnGluten INTEGER NOT NULL,
+      $columnFavorite INTEGER NOT NULL
     )
     ''');
     final jsonString = await rootBundle.loadString('assets/recipes.json');
@@ -67,7 +69,8 @@ class DatabaseHelper {
         columnImageURL: recipe['imageURL'],
         columnCookTime: recipe['cooktime'],
         columnVegan: recipe['vegan'],
-        columnGluten: recipe['gluten']
+        columnGluten: recipe['gluten'], 
+        columnFavorite: recipe['favorite']
       });
     }
     await batch.commit(noResult: true);
@@ -111,6 +114,17 @@ class DatabaseHelper {
     return await _db.delete(
       table,
       where: '$columnId = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> updateFavoriteStatus(int id, String newFavoriteValue) async {
+    await _initialization;
+
+    await _db.update(
+      'recipes',  
+      {columnFavorite: newFavoriteValue},
+      where: '$columnId = ?',  
       whereArgs: [id],
     );
   }

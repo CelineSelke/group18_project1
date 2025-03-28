@@ -6,7 +6,8 @@
       "imageURL": "pasta.jpg",
       "cooktime": "2 hours",
       "vegan": 0,
-      "gluten": 0
+      "gluten": 0, 
+      "favorite": 0
     },
     {
       "title": "Pancakes",
@@ -15,7 +16,8 @@
       "imageURL": "pancakes.jpg",
       "cooktime": "30 minutes",
       "vegan": 0,
-      "gluten": 0
+      "gluten": 0, 
+      "favorite": 0
     },
     {
       "title": "Omelette",
@@ -24,6 +26,7 @@
       "imageURL": "omelette.jpg",
       "cooktime": "1 hour",
       "vegan": 0,
-      "gluten": 1
+      "gluten": 1, 
+      "favorite": 0
     }
   ]

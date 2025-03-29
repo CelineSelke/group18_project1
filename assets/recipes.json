@@ -5,6 +5,7 @@
       "instructions": "Boil pasta...",
       "imageURL": "pasta.jpg",
       "cooktime": "2 hours",
+      "vegetarian": 1,
       "vegan": 0,
       "gluten": 0
     },
@@ -14,6 +15,7 @@
       "instructions": "Mix and fry...",
       "imageURL": "pancakes.jpg",
       "cooktime": "30 minutes",
+      "vegetarian": 1,
       "vegan": 0,
       "gluten": 0
     },
@@ -23,6 +25,7 @@
       "instructions": "Beat eggs...",
       "imageURL": "omelette.jpg",
       "cooktime": "1 hour",
+      "vegetarian": 1,
       "vegan": 0,
       "gluten": 1
     }

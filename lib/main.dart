@@ -533,29 +533,43 @@ class _MealPlannerState extends State<MealPlanner> {
   final TextEditingController _textController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
-  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
-      return allRecipes.where((recipe) {
-        bool matches = true;
-
-        matches = matches && recipe[DatabaseHelper.columnFavorite] == 1;
-        
-        return matches;
-      }).toList();
-  }
 
   @override
   void initState() {
     super.initState();
     _currentDate = DateTime.now();
     _recipesFuture = _initializeData();
+    _loadMealsForWeek(); 
   }
 
   Future<List<Map<String, dynamic>>> _initializeData() async {
     await dbHelper.init();
-    print("AAAAAAAAAAAAA");
     return dbHelper.queryAllRecipes();
   }
 
+  void _loadMealsForWeek() async {
+    final daysInWeek = _getDaysInWeek(_currentDate);
+    for (var date in daysInWeek) {
+      final meals = await getMealsForDay(date);
+      setState(() {
+        _items[date] = meals; 
+        print(_items[date]);
+      });
+    }
+  }
+
+  Future<List<String>> getMealsForDay(DateTime date) async {
+    List<String> items = [];
+    final plans = await dbHelper.getRecipesForDay(DateFormat('yyyy-MM-dd').format(date));
+
+    for (var plan in plans) {
+      final title = plan[DatabaseHelper.columnTitle];
+      if (title != null && title is String && !items.contains(title)) {
+        items.add(title);
+      }
+    }
+    return items;
+  }
 
   List<DateTime> _getDaysInWeek(DateTime date) {
     final firstDay = date.subtract(Duration(days: date.weekday - 1));
@@ -565,103 +579,139 @@ class _MealPlannerState extends State<MealPlanner> {
   void _changeWeek(int offset) {
     setState(() {
       _currentDate = _currentDate.add(Duration(days: offset * 7));
+      _loadMealsForWeek(); 
     });
   }
 
-void _showMealPlanDialog(DateTime date) {
-  showDialog(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: Text('Select a Recipe for ${DateFormat('EEEE').format(date)}', textAlign: TextAlign.center,),
-      children: [Container(
-        width: double.maxFinite,
-        
-        child: 
-        FutureBuilder<List<Map<String, dynamic>>>(
-          future: _recipesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
+  void _showMealPlanDialog(DateTime date) {
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text('Select a Recipe for ${DateFormat('EEEE').format(date)}', textAlign: TextAlign.center),
+        children: [
+          Container(
+            width: double.maxFinite,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _recipesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-            final allRecipes = snapshot.data ?? [];
-            final filteredRecipes = _filterRecipes(allRecipes);
+                final allRecipes = snapshot.data ?? [];
+                final filteredRecipes = _filterRecipes(allRecipes);
 
-            if (filteredRecipes.isEmpty) {
-              return Center(
-                child: Text(
-                  allRecipes.isEmpty
-                      ? 'No favorites found'
-                      : 'No recipes match the filters',
-                ),
-              );
-            }
+                if (filteredRecipes.isEmpty) {
+                  return Center(
+                    child: Text(
+                      allRecipes.isEmpty
+                          ? 'No favorites found'
+                          : 'No recipes match the filters',
+                    ),
+                  );
+                }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              itemCount: filteredRecipes.length,
-              itemBuilder: (context, index) {
-                final recipe = filteredRecipes[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Container(
-                          width: 60, 
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            image: DecorationImage(
-                              image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
-                              fit: BoxFit.cover,
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: filteredRecipes.length,
+                  itemBuilder: (context, index) {
+                    final recipe = filteredRecipes[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              image: DecorationImage(
+                                image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
+                          Expanded(
+                            child: Text(
+                              recipe[DatabaseHelper.columnTitle],
+                              style: TextStyle(fontSize: 16.0),
+                            ),
+                          ),
+                          Spacer(),
+                          IconButton(
+                            onPressed: () {
+                              _addItem(date, recipe);
+                            },
+                            icon: Icon(Icons.library_add),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Text(
-                          
-                          recipe[DatabaseHelper.columnTitle],
-
-                          style: TextStyle(fontSize: 16.0),
-                        ),
-                      ),
-                      Spacer()
-,                      IconButton(
-                        onPressed: () {
-                          _addItem(date, recipe);
-                        },
-                        icon: Icon(Icons.library_add),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
-  void _addItem(DateTime date, Map<String, dynamic> recipe) {
+  void _addItem(DateTime date, Map<String, dynamic> recipe) async {
+    int recipeID = recipe[DatabaseHelper.columnId];
+    String day = DateFormat('yyyy-MM-dd').format(date);
+
+    await dbHelper.insertMealPlan(recipeID, day);
+
     setState(() {
       _items[date] = [..._items[date] ?? [], recipe[DatabaseHelper.columnTitle]];
     });
   }
 
+  Future<int> _getRecipeIdByTitle(String title) async {
+    final recipes = await dbHelper.queryAllRecipes();
+    final recipe = recipes.firstWhere((recipe) => recipe[DatabaseHelper.columnTitle] == title);
+    return recipe[DatabaseHelper.columnId];
+  }
+
+  void _removeItem(DateTime date, String recipeTitle) async {
+    final recipe = _items[date]?.firstWhere(
+      (item) => item == recipeTitle,
+    );
+
+    if (recipe != null) {
+      final recipeId = await _getRecipeIdByTitle(recipeTitle);
+
+      await dbHelper.deleteMealPlan(DateFormat('yyyy-MM-dd').format(date), recipeId);
+
+      setState(() {
+        _items[date]?.remove(recipeTitle);
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
+    return allRecipes.where((recipe) {
+      bool matches = true;
+
+      matches = matches && recipe[DatabaseHelper.columnFavorite] == 1;
+
+      return matches;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final daysInWeek = _getDaysInWeek(_currentDate);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF105068),
-        title: Text("Meal Planner", style: TextStyle(color:Colors.white)),
+        title: Text("Meal Planner", style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         children: [
@@ -675,7 +725,7 @@ void _showMealPlanDialog(DateTime date) {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
-                  children: [ 
+                  children: [
                     Text(
                       '${DateFormat('MMM d').format(daysInWeek.first)} - '
                       '${DateFormat('MMM d').format(daysInWeek.last)}',
@@ -685,7 +735,7 @@ void _showMealPlanDialog(DateTime date) {
                       icon: Icon(Icons.calendar_today),
                       onPressed: () {},
                     ),
-                  ]
+                  ],
                 ),
               ),
               IconButton(
@@ -719,27 +769,25 @@ void _showMealPlanDialog(DateTime date) {
                       ),
                       if (items.isNotEmpty)
                         ...items.map((item) => ListTile(
-                          title: Text(item),
-                          dense: true,
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete, size: 16),
-                            onPressed: () {
-                              setState(() {
-                                _items[date]?.remove(item);
-                              });
-                            },
-                          ),
-                        )
-                      ),
+                              title: Text(item),
+                              dense: true,
+                              trailing: IconButton(
+                                icon: Icon(Icons.delete, size: 16),
+                                onPressed: () {
+                                  setState(() {
+                                    _removeItem(date, item);
+                                  });
+                                },
+                              ),
+                            )),
                     ],
                   ),
                 );
               },
             ),
-          )
-        ]
+          ),
+        ],
       ),
     );
   }
 }
-

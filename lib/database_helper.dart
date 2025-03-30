@@ -6,7 +6,8 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class DatabaseHelper {
   static const _databaseName = "RecipesDatabase.db";
-  static const _databaseVersion = 2;
+
+  static const _databaseVersion = 4;
   static const table = 'recipes';
   static const columnId = '_id';
   static const columnTitle = 'title';
@@ -18,6 +19,12 @@ class DatabaseHelper {
   static const columnVegan = 'vegan';
   static const columnGluten = 'gluten';
   static const columnFavorite = 'favorite';
+
+  static const tableMealPlan = 'meal_plan';
+  static const columnMealPlanId = '_id';
+  static const columnRecipeId = 'recipeId';  
+  static const columnDate = 'date';
+
   late Database _db;
   late Future<void> _initialization;
 
@@ -33,8 +40,10 @@ class DatabaseHelper {
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 3) {
+        if (oldVersion < 4) {
           await db.execute('DROP TABLE IF EXISTS $table');
+          await db.execute('DROP TABLE IF EXISTS $tableMealPlan');
+
           await _onCreate(db, newVersion);
         }
       },
@@ -58,6 +67,15 @@ class DatabaseHelper {
     final jsonString = await rootBundle.loadString('assets/recipes.json');
     final List<dynamic> jsonRecipes = json.decode(jsonString);
     await _insertDefaultRecipes(db, jsonRecipes);
+
+    await db.execute('''
+      CREATE TABLE $tableMealPlan (
+      $columnMealPlanId INTEGER PRIMARY KEY,
+      $columnRecipeId INTEGER,
+      $columnDate TEXT NOT NULL, 
+      FOREIGN KEY($columnRecipeId) REFERENCES $table($columnId)
+    )
+    ''');
   }
 
   Future<void> _insertDefaultRecipes(Database db, List<dynamic> recipes) async {
@@ -122,12 +140,38 @@ class DatabaseHelper {
   Future<void> updateFavoriteStatus(int id, int newFavoriteValue) async {
     await _initialization;
 
-    int rowsAffected = await _db.update(
+    await _db.update(
       table,  
       {columnFavorite: newFavoriteValue},
       where: '$columnId = ?',  
       whereArgs: [id],
     );
-    print('Rows affected: $rowsAffected');
   }
+
+  Future<void> insertMealPlan(int recipeId, String day) async {
+    await _initialization;
+    await _db.insert(tableMealPlan, {
+      columnRecipeId: recipeId,
+      columnDate: day,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getRecipesForDay(String date) async {
+    await _initialization;
+    return await _db.query(
+      tableMealPlan,
+      where: '$columnDate = ?',
+      whereArgs: [date],
+    );
+  }
+
+Future<int> deleteMealPlan(String day, int recipeId) async {
+  await _initialization;
+
+  return await _db.delete(
+    tableMealPlan,
+    where: '$columnDate = ? AND $columnRecipeId = ?',  
+    whereArgs: [day, recipeId], 
+  );
+}
 }

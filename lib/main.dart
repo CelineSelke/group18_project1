@@ -25,6 +25,7 @@ void main() {
       home: const RecipeBook(title: 'Recipe Book'),
       routes: {
         '/recipeBook': (context) => const RecipeBook(title: 'Recipes'),
+        '/favoritesList': (context) => const FavoriteList()
       },
     ),
   );
@@ -55,7 +56,12 @@ class AppFooter extends StatelessWidget {
             },
             child: Icon(Icons.search, color: Colors.white, size: 35),
           ),
-          Icon(Icons.favorite, color: Colors.white, size: 35),
+          IconButton(
+            onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => const FavoriteList()));
+            }, 
+            icon: Icon(Icons.favorite, color: Colors.white, size: 35)
+          ),
           Icon(Icons.calendar_month, color: Colors.white, size: 35),
           Icon(Icons.shopping_cart, color: Colors.white, size: 35),
         ],
@@ -202,6 +208,57 @@ class _RecipeBookState extends State<RecipeBook> {
   }
 }
 
+class FavoriteList extends StatefulWidget {
+  const FavoriteList({super.key});
+  final String title = "Favorites";
+
+  @override
+  State<RecipeBook> createState() => _FavoriteListState();
+}
+
+class _FavoriteListState extends State<RecipeBook> {
+  final DatabaseHelper dbHelper = DatabaseHelper();
+  late Future<List<Map<String, dynamic>>> _recipesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _recipesFuture = _initializeData(); // Initialize database here
+  }
+
+  Future<List<Map<String, dynamic>>> _initializeData() async {
+    await dbHelper.init();
+    return dbHelper.queryAllRecipes();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF105068),
+        title: Text("Recipes", style: TextStyle(color:Colors.white)),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _recipesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final recipes = snapshot.data ?? [];
+          if (recipes.isEmpty) {
+            return const Center(child: Text('No favorites found'));
+          }
+          return _FavoriteListView(recipes: recipes);
+        },
+      ),
+    );
+  }
+}
+
 class _RecipeListView extends StatelessWidget {
   final List<Map<String, dynamic>> recipes;
   const _RecipeListView({required this.recipes});
@@ -268,7 +325,7 @@ class _RecipeCard extends StatelessWidget {
           ),
           trailing: IconButton(
             onPressed: () async {
-              final newFavoriteValue = recipe[DatabaseHelper.columnFavorite] == "0" ? "1" : "0";
+              final newFavoriteValue = recipe[DatabaseHelper.columnFavorite] == 0 ? 1 : 0;
 
               await DatabaseHelper().updateFavoriteStatus(recipe['id'], newFavoriteValue);
 

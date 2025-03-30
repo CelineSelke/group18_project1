@@ -118,7 +118,7 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> updateFavoriteStatus(int id, String newFavoriteValue) async {
+  Future<void> updateFavoriteStatus(int id, int newFavoriteValue) async {
     await _initialization;
 
     await _db.update(

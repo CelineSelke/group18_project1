@@ -6,7 +6,8 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class DatabaseHelper {
   static const _databaseName = "RecipesDatabase.db";
-  static const _databaseVersion = 1;
+
+  static const _databaseVersion = 4;
   static const table = 'recipes';
   static const columnId = '_id';
   static const columnTitle = 'title';
@@ -14,8 +15,16 @@ class DatabaseHelper {
   static const columnInstructions = 'instructions';
   static const columnImageURL = 'imageURL';
   static const columnCookTime = 'cooktime';
+  static const columnVegetarian = 'vegetarian';
   static const columnVegan = 'vegan';
   static const columnGluten = 'gluten';
+  static const columnFavorite = 'favorite';
+
+  static const tableMealPlan = 'meal_plan';
+  static const columnMealPlanId = '_id';
+  static const columnRecipeId = 'recipeId';  
+  static const columnDate = 'date';
+
   late Database _db;
   late Future<void> _initialization;
 
@@ -31,8 +40,10 @@ class DatabaseHelper {
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 3) {
+        if (oldVersion < 4) {
           await db.execute('DROP TABLE IF EXISTS $table');
+          await db.execute('DROP TABLE IF EXISTS $tableMealPlan');
+
           await _onCreate(db, newVersion);
         }
       },
@@ -49,12 +60,22 @@ class DatabaseHelper {
       $columnImageURL TEXT NOT NULL,
       $columnCookTime TEXT NOT NULL,
       $columnVegan INTEGER NOT NULL,
-      $columnGluten INTEGER NOT NULL
+      $columnGluten INTEGER NOT NULL,
+      $columnFavorite INTEGER NOT NULL
     )
     ''');
     final jsonString = await rootBundle.loadString('assets/recipes.json');
     final List<dynamic> jsonRecipes = json.decode(jsonString);
     await _insertDefaultRecipes(db, jsonRecipes);
+
+    await db.execute('''
+      CREATE TABLE $tableMealPlan (
+      $columnMealPlanId INTEGER PRIMARY KEY,
+      $columnRecipeId INTEGER,
+      $columnDate TEXT NOT NULL, 
+      FOREIGN KEY($columnRecipeId) REFERENCES $table($columnId)
+    )
+    ''');
   }
 
   Future<void> _insertDefaultRecipes(Database db, List<dynamic> recipes) async {
@@ -67,7 +88,8 @@ class DatabaseHelper {
         columnImageURL: recipe['imageURL'],
         columnCookTime: recipe['cooktime'],
         columnVegan: recipe['vegan'],
-        columnGluten: recipe['gluten']
+        columnGluten: recipe['gluten'], 
+        columnFavorite: recipe['favorite']
       });
     }
     await batch.commit(noResult: true);
@@ -113,5 +135,77 @@ class DatabaseHelper {
       where: '$columnId = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<void> updateFavoriteStatus(int id, int newFavoriteValue) async {
+    await _initialization;
+
+    await _db.update(
+      table,  
+      {columnFavorite: newFavoriteValue},
+      where: '$columnId = ?',  
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> insertMealPlan(int recipeId, String day) async {
+    await _initialization;
+    await _db.insert(tableMealPlan, {
+      columnRecipeId: recipeId,
+      columnDate: day,
+    });
+    print("insert, $day");
+    final result = await (_db.rawQuery("SELECT * FROM meal_plan"));
+    for (var row in result) {
+       print(row); 
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getRecipesForDay(String date) async {
+    await _initialization;
+    print(date);
+    return await _db.query(
+      tableMealPlan,
+      where: '$columnDate = ?',
+      whereArgs: [date],
+    );
+  }
+
+  Future<int> deleteMealPlan(String day, int recipeId) async {
+    await _initialization;
+
+    return await _db.delete(
+      tableMealPlan,
+      where: '$columnDate = ? AND $columnRecipeId = ?',  
+      whereArgs: [day, recipeId], 
+    );
+  }
+
+  Future<String> getTitleFromID(int id) async {
+    await _initialization;
+
+    final List<Map<String, dynamic>> result = await _db.query(
+    table, 
+    where: '$columnId = ?', 
+    whereArgs: [id],   
+    );
+
+    if (result.isNotEmpty) {
+      return result.first[columnTitle]; 
+    }
+    else{ 
+      final result = await (_db.rawQuery("SELECT * FROM meal_plan"));
+       for (var row in result) {
+       print(row); 
+      }
+      clearTable("meal_plan");
+      return "EEEEEEEE";
+
+
+    }
+  }
+
+  Future<void> clearTable(String tableName) async {
+    await _db.delete(tableName); 
   }
 }

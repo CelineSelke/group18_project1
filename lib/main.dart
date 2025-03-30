@@ -369,8 +369,7 @@ class _FavoriteListState extends State<FavoriteList> {
         backgroundColor: Color(0xFF105068),
         title: Text("Favorites", style: TextStyle(color:Colors.white)),
       ),
-      body: Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
               future: _recipesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -395,7 +394,7 @@ class _FavoriteListState extends State<FavoriteList> {
                 return _RecipeListView(recipes: filteredRecipes);
               },
             ),
-          ),
+     
     );
   }
 }
@@ -418,7 +417,9 @@ class _RecipeListView extends StatelessWidget {
 
 class _FavoriteListView extends StatelessWidget {
   final List<Map<String, dynamic>> recipes;
-  const _FavoriteListView({required this.recipes});
+  final Function(DateTime, Map<String, dynamic>) onButtonPressed;
+  final DateTime date;
+  const _FavoriteListView({required this.recipes, required this.onButtonPressed, required this.date});
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +428,14 @@ class _FavoriteListView extends StatelessWidget {
       itemBuilder: (context, index) {
         final recipe = recipes[index];
         if(recipes[index][DatabaseHelper.columnFavorite] == 1){
-          return _RecipeCard(recipe: recipe);
+          return Row(children: [
+            _RecipeCard(recipe: recipe), 
+            IconButton(
+                icon: Icon(Icons.my_library_add),
+                onPressed: () {
+                  onButtonPressed(date, recipe);
+                },
+            ),],);
         }
       },
     );
@@ -440,7 +448,6 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-      final Function(int) onFavoriteStatusChanged;    
       return Card(
       color: const Color(0xFF5d8aa6),
       margin: const EdgeInsets.all(8),
@@ -506,19 +513,37 @@ class MealPlanner extends StatefulWidget {
   final String title;
 
   @override
-  _MealPlannerState createState() => _MealPlannerState();
+  State<MealPlanner> createState() => _MealPlannerState();
 }
 
 class _MealPlannerState extends State<MealPlanner> {
   late DateTime _currentDate;
   final Map<DateTime, List<String>> _items = {};
   final TextEditingController _textController = TextEditingController();
+  final DatabaseHelper dbHelper = DatabaseHelper();
+  late Future<List<Map<String, dynamic>>> _recipesFuture;
+  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
+      return allRecipes.where((recipe) {
+        bool matches = true;
+
+        matches = matches && recipe[DatabaseHelper.columnFavorite] == 1;
+        
+        return matches;
+      }).toList();
+  }
 
   @override
   void initState() {
     super.initState();
     _currentDate = DateTime.now();
+    _recipesFuture = _initializeData();
   }
+
+  Future<List<Map<String, dynamic>>> _initializeData() async {
+    await dbHelper.init();
+    return dbHelper.queryAllRecipes();
+  }
+
 
   List<DateTime> _getDaysInWeek(DateTime date) {
     final firstDay = date.subtract(Duration(days: date.weekday - 1));
@@ -531,31 +556,49 @@ class _MealPlannerState extends State<MealPlanner> {
     });
   }
 
-  void _addItem(DateTime date) {
+  void _showRecipeDialog(DateTime date) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add item for ${DateFormat('EEEE').format(date)}'),
-        content: TextField(
-          controller: _textController,
-          decoration: InputDecoration(hintText: 'Enter item'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (_textController.text.isNotEmpty) {
-                setState(() {
-                  _items[date] = [..._items[date] ?? [], _textController.text];
-                });
-                _textController.clear();
-                Navigator.pop(context);
-              }
-            },
-            child: Text('Add'),
+        title: Text('Select a recipe for ${DateFormat('EEEE').format(date)}'),
+        content: Container(
+          height: 300, 
+          child: Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _recipesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final allRecipes = snapshot.data ?? [];
+                final filteredRecipes = _filterRecipes(allRecipes);
+
+                if (filteredRecipes.isEmpty) {
+                  return Center(
+                    child: Text(
+                      allRecipes.isEmpty 
+                        ? 'No favorites found' 
+                        : 'No recipes match the filters',
+                    ),
+                  );
+                }
+                
+                return _FavoriteListView(recipes: filteredRecipes, date: date, onButtonPressed: _addItem,);
+              },
+            ),
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  void _addItem(DateTime date, Map<String, dynamic> recipe) {
+    setState(() {
+      _items[date] = [..._items[date] ?? [], recipe[DatabaseHelper.columnTitle]];
+    });
   }
 
   @override
@@ -617,7 +660,7 @@ class _MealPlannerState extends State<MealPlanner> {
                         ),
                         trailing: IconButton(
                           icon: Icon(Icons.add),
-                          onPressed: () => _addItem(date),
+                          onPressed: () => _showRecipeDialog(date),
                         ),
                       ),
                       if (items.isNotEmpty)
@@ -645,3 +688,4 @@ class _MealPlannerState extends State<MealPlanner> {
     );
   }
 }
+

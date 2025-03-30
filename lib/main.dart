@@ -1,38 +1,70 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(
     MaterialApp(
-      builder: (context, child) {
-        return Scaffold(
-          body: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 60),
-                child: child!,
-              ),
-              const Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: AppFooter(),
-              ),
-            ],
-          ),
-        );
-      },
-      home: const RecipeBook(title: 'Recipe Book'),
+      home: RootWidget(),
       routes: {
         '/recipeBook': (context) => const RecipeBook(title: 'Recipes'),
         '/favoritesList': (context) => const FavoriteList()
+        '/mealPlanner': (context) => MealPlanner(title: 'Meal Planner'),
       },
     ),
   );
 }
 
+class RootWidget extends StatefulWidget {
+  @override
+  _RootWidgetState createState() => _RootWidgetState();
+}
+
+class _RootWidgetState extends State<RootWidget> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = [
+    const RecipeBook(title: 'Recipe Book'),
+    const MealPlanner(title: 'Meal Planner'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 70),
+            child: _screens[_currentIndex],
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: AppFooter(
+              currentIndex: _currentIndex,
+              onTabTapped: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AppFooter extends StatelessWidget {
-  const AppFooter({super.key});
+  final int currentIndex;
+  final Function(int) onTabTapped;
+
+  const AppFooter({
+    super.key,
+    required this.currentIndex,
+    required this.onTabTapped,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,19 +74,11 @@ class AppFooter extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          GestureDetector(
-            onTap: () {
-              //DOESN'T WORK WILL FIX LATER
-              final currentRoute = ModalRoute.of(context)?.settings.name;
-              if (currentRoute != '/recipeBook') {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/recipeBook',
-                  (Route<dynamic> route) => false,
-                );
-              }
-            },
-            child: Icon(Icons.search, color: Colors.white, size: 35),
+          IconButton(
+            icon: Icon(Icons.search, 
+                color: currentIndex == 0 ? Colors.amber : Colors.white, 
+                size: 35),
+            onPressed: () => onTabTapped(0),
           ),
           IconButton(
             onPressed: () {
@@ -62,7 +86,12 @@ class AppFooter extends StatelessWidget {
             }, 
             icon: Icon(Icons.favorite, color: Colors.white, size: 35)
           ),
-          Icon(Icons.calendar_month, color: Colors.white, size: 35),
+          IconButton(
+            icon: Icon(Icons.calendar_month, 
+                color: currentIndex == 1 ? Colors.amber : Colors.white, 
+                size: 35),
+            onPressed: () => onTabTapped(1),
+          ),
           Icon(Icons.shopping_cart, color: Colors.white, size: 35),
         ],
       ),
@@ -168,6 +197,27 @@ class RecipeBook extends StatefulWidget {
 class _RecipeBookState extends State<RecipeBook> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
+  bool isVegetarian = false;
+  bool isVegan = false;
+  bool isGlutenFree = false;
+
+  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
+    return allRecipes.where((recipe) {
+      bool matches = true;
+      
+      if (isVegetarian) {
+        matches = matches && recipe[DatabaseHelper.columnVegetarian] == 1;
+      }
+      if (isVegan) {
+        matches = matches && recipe[DatabaseHelper.columnVegan] == 1;
+      }
+      if (isGlutenFree) {
+        matches = matches && recipe[DatabaseHelper.columnGluten] == 1;
+      }
+      return matches;
+    }).toList();
+  }
+
 
   @override
   void initState() {
@@ -188,21 +238,227 @@ class _RecipeBookState extends State<RecipeBook> {
         backgroundColor: Color(0xFF105068),
         title: Text("Recipes", style: TextStyle(color:Colors.white)),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _recipesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          final recipes = snapshot.data ?? [];
-          if (recipes.isEmpty) {
-            return const Center(child: Text('No recipes found'));
-          }
-          return _RecipeListView(recipes: recipes);
-        },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Card(
+            color: Color(0xFFA897A7),
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+            ),
+            child: Container(
+              height: 135,
+              width: double.infinity,
+              padding: const EdgeInsets.all(16), 
+              constraints: BoxConstraints(maxWidth: 600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text('Dietary Filters', style: TextStyle(color: Colors.black, fontSize: 22)),
+                  Text('Only show recipes which are...', style: TextStyle(color: Colors.black, fontSize: 16)),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: isVegetarian,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isVegetarian = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Vegetarian'),
+                      Checkbox(
+                        value: isVegan,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isVegan = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Vegan'),
+                      Checkbox(
+                        value: isGlutenFree,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isGlutenFree = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Gluten-Free')
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _recipesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final allRecipes = snapshot.data ?? [];
+                final filteredRecipes = _filterRecipes(allRecipes);
+
+                if (filteredRecipes.isEmpty) {
+                  return Center(
+                    child: Text(
+                      allRecipes.isEmpty 
+                        ? 'No recipes found' 
+                        : 'No recipes match the filters',
+                    ),
+                  );
+                }
+                
+                return _RecipeListView(recipes: filteredRecipes);
+              },
+            ),
+          ),
+        ]
+      ),
+    );
+  }
+}
+
+class FavoriteList extends StatefulWidget {
+  const FavoriteList({super.key});
+  final String title = "Favorites";
+
+  @override
+  State<RecipeBook> createState() => _FavoriteListState();
+}
+
+class _FavoriteListState extends State<RecipeBook> {
+  final DatabaseHelper dbHelper = DatabaseHelper();
+  late Future<List<Map<String, dynamic>>> _recipesFuture;
+  bool isVegetarian = false;
+  bool isVegan = false;
+  bool isGlutenFree = false;
+
+  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
+    return allRecipes.where((recipe) {
+      bool matches = true;
+      
+      if (isVegetarian) {
+        matches = matches && recipe[DatabaseHelper.columnVegetarian] == 1;
+      }
+      if (isVegan) {
+        matches = matches && recipe[DatabaseHelper.columnVegan] == 1;
+      }
+      if (isGlutenFree) {
+        matches = matches && recipe[DatabaseHelper.columnGluten] == 1;
+      }
+      return matches;
+    }).toList();
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _recipesFuture = _initializeData(); // Initialize database here
+  }
+
+  Future<List<Map<String, dynamic>>> _initializeData() async {
+    await dbHelper.init();
+    return dbHelper.queryAllRecipes();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF105068),
+        title: Text("Recipes", style: TextStyle(color:Colors.white)),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Card(
+            color: Color(0xFFA897A7),
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+            ),
+            child: Container(
+              height: 135,
+              width: double.infinity,
+              padding: const EdgeInsets.all(16), 
+              constraints: BoxConstraints(maxWidth: 600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text('Dietary Filters', style: TextStyle(color: Colors.black, fontSize: 22)),
+                  Text('Only show recipes which are...', style: TextStyle(color: Colors.black, fontSize: 16)),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: isVegetarian,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isVegetarian = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Vegetarian'),
+                      Checkbox(
+                        value: isVegan,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isVegan = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Vegan'),
+                      Checkbox(
+                        value: isGlutenFree,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            isGlutenFree = newValue!;
+                          });
+                        },
+                      ),
+                      Text('Gluten-Free')
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _recipesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final allRecipes = snapshot.data ?? [];
+                final filteredRecipes = _filterRecipes(allRecipes);
+
+                if (filteredRecipes.isEmpty) {
+                  return Center(
+                    child: Text(
+                      allRecipes.isEmpty 
+                        ? 'No recipes found' 
+                        : 'No recipes match the filters',
+                    ),
+                  );
+                }
+                
+                return _RecipeListView(recipes: filteredRecipes);
+              },
+            ),
+          ),
+        ]
       ),
     );
   }
@@ -352,6 +608,152 @@ class _RecipeCard extends StatelessWidget {
           image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
           fit: BoxFit.cover,
         ),
+      ),
+    );
+  }
+}
+
+class MealPlanner extends StatefulWidget {
+  const MealPlanner({super.key, required this.title});
+
+  final String title;
+
+  @override
+  _MealPlannerState createState() => _MealPlannerState();
+}
+
+class _MealPlannerState extends State<MealPlanner> {
+  late DateTime _currentDate;
+  final Map<DateTime, List<String>> _items = {};
+  final TextEditingController _textController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDate = DateTime.now();
+  }
+
+  List<DateTime> _getDaysInWeek(DateTime date) {
+    final firstDay = date.subtract(Duration(days: date.weekday - 1));
+    return List.generate(7, (index) => firstDay.add(Duration(days: index)));
+  }
+
+  void _changeWeek(int offset) {
+    setState(() {
+      _currentDate = _currentDate.add(Duration(days: offset * 7));
+    });
+  }
+
+  void _addItem(DateTime date) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add item for ${DateFormat('EEEE').format(date)}'),
+        content: TextField(
+          controller: _textController,
+          decoration: InputDecoration(hintText: 'Enter item'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (_textController.text.isNotEmpty) {
+                setState(() {
+                  _items[date] = [..._items[date] ?? [], _textController.text];
+                });
+                _textController.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInWeek = _getDaysInWeek(_currentDate);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF105068),
+        title: Text("Meal Planner", style: TextStyle(color:Colors.white)),
+      ),
+      body: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.chevron_left),
+                onPressed: () => _changeWeek(-1),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [ 
+                    Text(
+                      '${DateFormat('MMM d').format(daysInWeek.first)} - '
+                      '${DateFormat('MMM d').format(daysInWeek.last)}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.calendar_today),
+                      onPressed: () {},
+                    ),
+                  ]
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.chevron_right),
+                onPressed: () => _changeWeek(1),
+              ),
+            ],
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.all(16),
+              itemCount: daysInWeek.length,
+              separatorBuilder: (context, index) => Divider(height: 16),
+              itemBuilder: (context, index) {
+                final date = daysInWeek[index];
+                final dayName = DateFormat('EEEE').format(date);
+                final items = _items[date] ?? [];
+
+                return Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        title: Text(
+                          '$dayName, ${DateFormat('MMM d').format(date)}',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.add),
+                          onPressed: () => _addItem(date),
+                        ),
+                      ),
+                      if (items.isNotEmpty)
+                        ...items.map((item) => ListTile(
+                          title: Text(item),
+                          dense: true,
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete, size: 16),
+                            onPressed: () {
+                              setState(() {
+                                _items[date]?.remove(item);
+                              });
+                            },
+                          ),
+                        )
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          )
+        ]
       ),
     );
   }

@@ -14,6 +14,7 @@ class DatabaseHelper {
   static const columnInstructions = 'instructions';
   static const columnImageURL = 'imageURL';
   static const columnCookTime = 'cooktime';
+  static const columnVegetarian = 'vegetarian';
   static const columnVegan = 'vegan';
   static const columnGluten = 'gluten';
   static const columnFavorite = 'favorite';

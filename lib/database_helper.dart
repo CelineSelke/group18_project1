@@ -154,10 +154,16 @@ class DatabaseHelper {
       columnRecipeId: recipeId,
       columnDate: day,
     });
+    print("insert, $day");
+    final result = await (_db.rawQuery("SELECT * FROM meal_plan"));
+    for (var row in result) {
+       print(row); 
+    }
   }
 
   Future<List<Map<String, dynamic>>> getRecipesForDay(String date) async {
     await _initialization;
+    print(date);
     return await _db.query(
       tableMealPlan,
       where: '$columnDate = ?',
@@ -165,13 +171,41 @@ class DatabaseHelper {
     );
   }
 
-Future<int> deleteMealPlan(String day, int recipeId) async {
-  await _initialization;
+  Future<int> deleteMealPlan(String day, int recipeId) async {
+    await _initialization;
 
-  return await _db.delete(
-    tableMealPlan,
-    where: '$columnDate = ? AND $columnRecipeId = ?',  
-    whereArgs: [day, recipeId], 
-  );
-}
+    return await _db.delete(
+      tableMealPlan,
+      where: '$columnDate = ? AND $columnRecipeId = ?',  
+      whereArgs: [day, recipeId], 
+    );
+  }
+
+  Future<String> getTitleFromID(int id) async {
+    await _initialization;
+
+    final List<Map<String, dynamic>> result = await _db.query(
+    table, 
+    where: '$columnId = ?', 
+    whereArgs: [id],   
+    );
+
+    if (result.isNotEmpty) {
+      return result.first[columnTitle]; 
+    }
+    else{ 
+      final result = await (_db.rawQuery("SELECT * FROM meal_plan"));
+       for (var row in result) {
+       print(row); 
+      }
+      clearTable("meal_plan");
+      return "EEEEEEEE";
+
+
+    }
+  }
+
+  Future<void> clearTable(String tableName) async {
+    await _db.delete(tableName); 
+  }
 }

@@ -435,7 +435,6 @@ class _FavoriteListView extends StatelessWidget {
       itemCount: favoriteRecipes.length,
       itemBuilder: (context, index) {
         final recipe = favoriteRecipes[index];
-          print("BBBBBBBB");
           return Row(children: [
             recipe[DatabaseHelper.columnTitle],
             recipe[DatabaseHelper.columnCookTime],
@@ -529,7 +528,7 @@ class MealPlanner extends StatefulWidget {
 
 class _MealPlannerState extends State<MealPlanner> {
   late DateTime _currentDate;
-  final Map<DateTime, List<String>> _items = {};
+  Map<DateTime, List<String>> _items = {};
   final TextEditingController _textController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
@@ -540,6 +539,7 @@ class _MealPlannerState extends State<MealPlanner> {
     _currentDate = DateTime.now();
     _recipesFuture = _initializeData();
     _loadMealsForWeek(); 
+    
   }
 
   Future<List<Map<String, dynamic>>> _initializeData() async {
@@ -553,7 +553,6 @@ class _MealPlannerState extends State<MealPlanner> {
       final meals = await getMealsForDay(date);
       setState(() {
         _items[date] = meals; 
-        print(_items[date]);
       });
     }
   }
@@ -561,11 +560,14 @@ class _MealPlannerState extends State<MealPlanner> {
   Future<List<String>> getMealsForDay(DateTime date) async {
     List<String> items = [];
     final plans = await dbHelper.getRecipesForDay(DateFormat('yyyy-MM-dd').format(date));
+    print('Plans for $date: $plans');
 
     for (var plan in plans) {
-      final title = plan[DatabaseHelper.columnTitle];
-      if (title != null && title is String && !items.contains(title)) {
+      print("");
+      final title = await dbHelper.getTitleFromID(plan[DatabaseHelper.columnRecipeId]);
+      if (!items.contains(title)) {
         items.add(title);
+        print("date $date title $title");
       }
     }
     return items;

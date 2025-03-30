@@ -572,7 +572,7 @@ void _showMealPlanDialog(DateTime date) {
   showDialog(
     context: context,
     builder: (context) => SimpleDialog(
-      title: Text('Select a recipe for ${DateFormat('EEEE').format(date)}'),
+      title: Text('Select a Recipe for ${DateFormat('EEEE').format(date)}', textAlign: TextAlign.center,),
       children: [Container(
         width: double.maxFinite,
         
@@ -606,16 +606,31 @@ void _showMealPlanDialog(DateTime date) {
               itemBuilder: (context, index) {
                 final recipe = filteredRecipes[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
+                      Container(
+                          width: 60, 
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            image: DecorationImage(
+                              image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                      ),
                       Expanded(
                         child: Text(
+                          
                           recipe[DatabaseHelper.columnTitle],
+
                           style: TextStyle(fontSize: 16.0),
                         ),
                       ),
-                      IconButton(
+                      Spacer()
+,                      IconButton(
                         onPressed: () {
                           _addItem(date, recipe);
                         },

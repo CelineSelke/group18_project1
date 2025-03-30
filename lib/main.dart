@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 import 'package:intl/intl.dart';
 
@@ -419,25 +420,35 @@ class _FavoriteListView extends StatelessWidget {
   final List<Map<String, dynamic>> recipes;
   final Function(DateTime, Map<String, dynamic>) onButtonPressed;
   final DateTime date;
+  
   const _FavoriteListView({required this.recipes, required this.onButtonPressed, required this.date});
 
   @override
   Widget build(BuildContext context) {
+
+    final favoriteRecipes = recipes.where((recipe) => 
+      recipe[DatabaseHelper.columnFavorite] == 1).toList();
+    if (favoriteRecipes.isEmpty) {
+      return Center(child: Text("No favorite recipes found"));
+    }
     return ListView.builder(
-      itemCount: recipes.length,
+      itemCount: favoriteRecipes.length,
       itemBuilder: (context, index) {
-        final recipe = recipes[index];
-        if(recipes[index][DatabaseHelper.columnFavorite] == 1){
+        final recipe = favoriteRecipes[index];
+          print("BBBBBBBB");
           return Row(children: [
-            _RecipeCard(recipe: recipe), 
+            recipe[DatabaseHelper.columnTitle],
+            recipe[DatabaseHelper.columnCookTime],
             IconButton(
                 icon: Icon(Icons.my_library_add),
                 onPressed: () {
                   onButtonPressed(date, recipe);
                 },
-            ),],);
+            ),
+          ],
+          );
         }
-      },
+      
     );
   }
 }
@@ -541,6 +552,7 @@ class _MealPlannerState extends State<MealPlanner> {
 
   Future<List<Map<String, dynamic>>> _initializeData() async {
     await dbHelper.init();
+    print("AAAAAAAAAAAAA");
     return dbHelper.queryAllRecipes();
   }
 
@@ -556,44 +568,71 @@ class _MealPlannerState extends State<MealPlanner> {
     });
   }
 
-  void _showRecipeDialog(DateTime date) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select a recipe for ${DateFormat('EEEE').format(date)}'),
-        content: Container(
-          height: 300, 
-          child: Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _recipesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final allRecipes = snapshot.data ?? [];
-                final filteredRecipes = _filterRecipes(allRecipes);
+void _showMealPlanDialog(DateTime date) {
+  showDialog(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: Text('Select a recipe for ${DateFormat('EEEE').format(date)}'),
+      children: [Container(
+        width: double.maxFinite,
+        
+        child: 
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _recipesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
 
-                if (filteredRecipes.isEmpty) {
-                  return Center(
-                    child: Text(
-                      allRecipes.isEmpty 
-                        ? 'No favorites found' 
-                        : 'No recipes match the filters',
-                    ),
-                  );
-                }
-                
-                return _FavoriteListView(recipes: filteredRecipes, date: date, onButtonPressed: _addItem,);
+            final allRecipes = snapshot.data ?? [];
+            final filteredRecipes = _filterRecipes(allRecipes);
+
+            if (filteredRecipes.isEmpty) {
+              return Center(
+                child: Text(
+                  allRecipes.isEmpty
+                      ? 'No favorites found'
+                      : 'No recipes match the filters',
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              itemCount: filteredRecipes.length,
+              itemBuilder: (context, index) {
+                final recipe = filteredRecipes[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          recipe[DatabaseHelper.columnTitle],
+                          style: TextStyle(fontSize: 16.0),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          _addItem(date, recipe);
+                        },
+                        icon: Icon(Icons.library_add),
+                      ),
+                    ],
+                  ),
+                );
               },
-            ),
-          ),
+            );
+          },
         ),
       ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   void _addItem(DateTime date, Map<String, dynamic> recipe) {
     setState(() {
@@ -660,7 +699,7 @@ class _MealPlannerState extends State<MealPlanner> {
                         ),
                         trailing: IconButton(
                           icon: Icon(Icons.add),
-                          onPressed: () => _showRecipeDialog(date),
+                          onPressed: () => _showMealPlanDialog(date),
                         ),
                       ),
                       if (items.isNotEmpty)

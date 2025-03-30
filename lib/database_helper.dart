@@ -6,7 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class DatabaseHelper {
   static const _databaseName = "RecipesDatabase.db";
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
   static const table = 'recipes';
   static const columnId = '_id';
   static const columnTitle = 'title';
@@ -122,11 +122,12 @@ class DatabaseHelper {
   Future<void> updateFavoriteStatus(int id, int newFavoriteValue) async {
     await _initialization;
 
-    await _db.update(
-      'recipes',  
+    int rowsAffected = await _db.update(
+      table,  
       {columnFavorite: newFavoriteValue},
       where: '$columnId = ?',  
       whereArgs: [id],
     );
+    print('Rows affected: $rowsAffected');
   }
 }

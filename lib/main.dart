@@ -8,7 +8,7 @@ void main() {
       home: RootWidget(),
       routes: {
         '/recipeBook': (context) => const RecipeBook(title: 'Recipes'),
-        '/favoritesList': (context) => const FavoriteList()
+        '/favoritesList': (context) => const FavoriteList(),
         '/mealPlanner': (context) => MealPlanner(title: 'Meal Planner'),
       },
     ),
@@ -26,6 +26,7 @@ class _RootWidgetState extends State<RootWidget> {
   final List<Widget> _screens = [
     const RecipeBook(title: 'Recipe Book'),
     const MealPlanner(title: 'Meal Planner'),
+    const FavoriteList()
   ];
 
   @override
@@ -81,10 +82,10 @@ class AppFooter extends StatelessWidget {
             onPressed: () => onTabTapped(0),
           ),
           IconButton(
-            onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => const FavoriteList()));
-            }, 
-            icon: Icon(Icons.favorite, color: Colors.white, size: 35)
+            onPressed: () => onTabTapped(2), 
+            icon: Icon(Icons.favorite, 
+                color: currentIndex == 2 ? Colors.amber : Colors.white, 
+                size: 35)
           ),
           IconButton(
             icon: Icon(Icons.calendar_month, 
@@ -330,33 +331,14 @@ class FavoriteList extends StatefulWidget {
   final String title = "Favorites";
 
   @override
-  State<RecipeBook> createState() => _FavoriteListState();
+  State<FavoriteList> createState() => _FavoriteListState();
 }
 
-class _FavoriteListState extends State<RecipeBook> {
+
+
+class _FavoriteListState extends State<FavoriteList> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
-  bool isVegetarian = false;
-  bool isVegan = false;
-  bool isGlutenFree = false;
-
-  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
-    return allRecipes.where((recipe) {
-      bool matches = true;
-      
-      if (isVegetarian) {
-        matches = matches && recipe[DatabaseHelper.columnVegetarian] == 1;
-      }
-      if (isVegan) {
-        matches = matches && recipe[DatabaseHelper.columnVegan] == 1;
-      }
-      if (isGlutenFree) {
-        matches = matches && recipe[DatabaseHelper.columnGluten] == 1;
-      }
-      return matches;
-    }).toList();
-  }
-
 
   @override
   void initState() {
@@ -369,69 +351,25 @@ class _FavoriteListState extends State<RecipeBook> {
     return dbHelper.queryAllRecipes();
   }
 
+  List<Map<String, dynamic>> _filterRecipes(List<Map<String, dynamic>> allRecipes) {
+    return allRecipes.where((recipe) {
+      bool matches = true;
+
+      matches = matches && recipe[DatabaseHelper.columnFavorite] == 1;
+      
+      return matches;
+    }).toList();
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF105068),
-        title: Text("Recipes", style: TextStyle(color:Colors.white)),
+        title: Text("Favorites", style: TextStyle(color:Colors.white)),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Card(
-            color: Color(0xFFA897A7),
-            margin: const EdgeInsets.all(8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-            ),
-            child: Container(
-              height: 135,
-              width: double.infinity,
-              padding: const EdgeInsets.all(16), 
-              constraints: BoxConstraints(maxWidth: 600),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text('Dietary Filters', style: TextStyle(color: Colors.black, fontSize: 22)),
-                  Text('Only show recipes which are...', style: TextStyle(color: Colors.black, fontSize: 16)),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: isVegetarian,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            isVegetarian = newValue!;
-                          });
-                        },
-                      ),
-                      Text('Vegetarian'),
-                      Checkbox(
-                        value: isVegan,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            isVegan = newValue!;
-                          });
-                        },
-                      ),
-                      Text('Vegan'),
-                      Checkbox(
-                        value: isGlutenFree,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            isGlutenFree = newValue!;
-                          });
-                        },
-                      ),
-                      Text('Gluten-Free')
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ),
-          Expanded(
+      body: Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _recipesFuture,
               builder: (context, snapshot) {
@@ -458,59 +396,6 @@ class _FavoriteListState extends State<RecipeBook> {
               },
             ),
           ),
-        ]
-      ),
-    );
-  }
-}
-
-class FavoriteList extends StatefulWidget {
-  const FavoriteList({super.key});
-  final String title = "Favorites";
-
-  @override
-  State<RecipeBook> createState() => _FavoriteListState();
-}
-
-class _FavoriteListState extends State<RecipeBook> {
-  final DatabaseHelper dbHelper = DatabaseHelper();
-  late Future<List<Map<String, dynamic>>> _recipesFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _recipesFuture = _initializeData(); // Initialize database here
-  }
-
-  Future<List<Map<String, dynamic>>> _initializeData() async {
-    await dbHelper.init();
-    return dbHelper.queryAllRecipes();
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xFF105068),
-        title: Text("Recipes", style: TextStyle(color:Colors.white)),
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _recipesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          final recipes = snapshot.data ?? [];
-          if (recipes.isEmpty) {
-            return const Center(child: Text('No favorites found'));
-          }
-          return _FavoriteListView(recipes: recipes);
-        },
-      ),
     );
   }
 }
@@ -555,7 +440,8 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+      final Function(int) onFavoriteStatusChanged;    
+      return Card(
       color: const Color(0xFF5d8aa6),
       margin: const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
@@ -583,7 +469,8 @@ class _RecipeCard extends StatelessWidget {
             onPressed: () async {
               final newFavoriteValue = recipe[DatabaseHelper.columnFavorite] == 0 ? 1 : 0;
 
-              await DatabaseHelper().updateFavoriteStatus(recipe['id'], newFavoriteValue);
+              await DatabaseHelper().updateFavoriteStatus(recipe[DatabaseHelper.columnId], newFavoriteValue);
+
 
             },
             icon: Icon(Icons.favorite, color: recipe[DatabaseHelper.columnFavorite] == 0 ? Colors.white : Colors.red, size: 50)

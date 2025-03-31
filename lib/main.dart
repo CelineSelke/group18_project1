@@ -165,20 +165,22 @@ class _RecipeDetailState extends State<RecipeDetail> {
               ],
             ),
             const SizedBox(height: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text("Ingredients", style: TextStyle(fontSize: 28)),
-                SizedBox(height: 4),
-                Text(recipe[DatabaseHelper.columnIngredients], style: TextStyle(fontSize: 16)),
-                SizedBox(height: 12),
-                Text("Directions", style: TextStyle(fontSize: 28)),
-                SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(recipe[DatabaseHelper.columnInstructions], style: TextStyle(fontSize: 16)),
-                ),
-              ]
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text("Ingredients", style: TextStyle(fontSize: 28)),
+                  SizedBox(height: 4),
+                  Text(recipe[DatabaseHelper.columnIngredients], style: TextStyle(fontSize: 16)),
+                  SizedBox(height: 12),
+                  Text("Directions", style: TextStyle(fontSize: 28)),
+                  SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(recipe[DatabaseHelper.columnInstructions], style: TextStyle(fontSize: 16)),
+                  ),
+                ],
+              ),
             )
           ],
         ),

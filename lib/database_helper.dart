@@ -7,7 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 class DatabaseHelper {
   static const _databaseName = "RecipesDatabase.db";
 
-  static const _databaseVersion = 4;
+  static const _databaseVersion = 11;
   static const table = 'recipes';
   static const columnId = '_id';
   static const columnTitle = 'title';
@@ -40,7 +40,7 @@ class DatabaseHelper {
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 4) {
+        if (oldVersion < 11) {
           await db.execute('DROP TABLE IF EXISTS $table');
           await db.execute('DROP TABLE IF EXISTS $tableMealPlan');
 
@@ -61,6 +61,7 @@ class DatabaseHelper {
       $columnCookTime TEXT NOT NULL,
       $columnVegan INTEGER NOT NULL,
       $columnGluten INTEGER NOT NULL,
+      $columnVegetarian INTEGER NOT NULL,
       $columnFavorite INTEGER NOT NULL
     )
     ''');
@@ -88,6 +89,7 @@ class DatabaseHelper {
         columnImageURL: recipe['imageURL'],
         columnCookTime: recipe['cooktime'],
         columnVegan: recipe['vegan'],
+        columnVegetarian: recipe['vegetarian'],
         columnGluten: recipe['gluten'], 
         columnFavorite: recipe['favorite']
       });

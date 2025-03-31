@@ -1,7 +1,7 @@
 [
     {
       "title": "Pasta",
-      "ingredients": "Pasta x 10 1/2 oz , Tomato 34 oz, Cheese x 1 lb, Garlic x 8 cloves, Olive Oil x 3 tbsp, Oregano x 1 1/2 tsp",
+      "ingredients": "Pasta x 10.5 oz,Tomato 34 oz,Cheese x 1 lb,Garlic x 8 cloves,Olive Oil x 3 tbsp,Oregano x 1.5 tsp",
       "instructions": "Heat up the oven to 220° C / 425° F. Cut your tomatoes into halves and put them in a large baking dish together with unpeeled, crushed with the side of a knife garlic cloves. Stir olive oil. Bake for 25-30 minutes. While the sauce is in the oven, cook your pasta just short of al dente. Once tomatoes are soft, juicy and lightly charred in places, place the tomatoes and their juices into a blender. Squeeze garlic cloves out of their skins and add them in. Blend until smooth. Transfer to a pan to heat it up gently, adjust the seasoning if needed and toss cooked pasta in the sauce.",
       "imageURL": "pasta.jpg",
       "cooktime": "40 minutes",
@@ -12,7 +12,7 @@
     },
     {
       "title": "Pancakes",
-      "ingredients": "Flour x 1.5 cups, Eggs x 1, Milk x 1 1/2 cups, Baking Powder x 3 1/2 tsp, White Sugar x 1 tbsp, Salt x 1/4 tsp, Butter x 3 tsp",
+      "ingredients": "Flour x 1.5 cups,Eggs x 1,Milk x 1.5 cups,Baking Powder x 3.5 tsp,White Sugar x 1 tbsp,Salt x 0.25 tsp,Butter x 3 tsp",
       "instructions": "Sift flour, baking powder, sugar, and salt together in a large bowl. Make a well in the center and add milk, melted butter, and egg; mix until smooth.\nHeat a lightly oiled griddle or pan over medium-high heat. Pour or scoop the batter onto the griddle, using approximately 1/4 cup for each pancake; cook until bubbles form and the edges are dry, about 2 to 3 minutes. Flip and cook until browned on the other side. Repeat with remaining batter. ",
       "imageURL": "pancakes.jpg",
       "cooktime": "20 minutes",
@@ -23,7 +23,7 @@
     },
     {
       "title": "Omelette",
-      "ingredients": "Eggs x 3, Butter x 1 tbsp, Salt x 2 tbsp, Pepper x 2 tbsp",
+      "ingredients": "Eggs x 3,Butter x 1 tbsp,Salt x 2 tbsp,Pepper x 2 tbsp",
       "instructions": "First, beat the eggs. Crack them into a medium bowl and whisk to combine the egg whites and yolks. Season with a pinch of salt. Next, heat the pan. To make a 2-egg omelette, you’ll need an 8-inch skillet, preferably nonstick. Heat it over medium heat, and then coat the bottom with butter or oil. Then, pour in the egg mixture. Reduce the heat to medium-low. Cook without stirring until the edges of the eggs just begin to set, about 10 seconds. Use a spatula to work around the edges of the omelette, dragging the cooked egg into the center of the pan. Let the uncooked egg flow to the edges of the pan. Tilt the pan as needed to direct the runny egg. At this point, use your spatula to gently smooth the raw egg into an even layer. Cook without stirring until the eggs are mostly set. Then, add your desired fillings to one side of the eggs. Fold to close and cook until the eggs are just set. Remove from the heat, season to taste with salt and pepper, and serve!",
       "imageURL": "omelette.jpg",
       "cooktime": "1 hour",
@@ -34,7 +34,7 @@
     },
     {
       "title": "Falafel",
-      "ingredients": "Chickpeas x 1 lb, Salt x 1 tbsp, Parsley x 3/4 cup, Cilantro x 1/2 cup, Onion x 1, Garlic x 1, Cumin x 2 tbsp, Coriander x 2 tbsp, Pepper x 1 tbsp, Baking Powder x 1 tbsp, Neutral Oil x 4 cups",
+      "ingredients": "Chickpeas x 1 lb,Salt x 1 tbsp,Parsley x 0.75 cup,Cilantro x 0.5 cup,Onion x 1,Garlic x 1,Cumin x 2 tbsp,Coriander x 2 tbsp,Pepper x 1 tbsp,Baking Powder x 1 tbsp,Neutral Oil x 4 cups",
       "instructions": "Place the soaked chickpeas and salt in the bowl of a food processor. Pulse to fine, pebble-sized pieces. Add the parsley, cilantro, onion, garlic, cumin, coriander, and black pepper. Blend until the mixture turns into a thick paste, scraping down the sides as needed. Remove the blade from the bowl, cover the bowl of the food processor, and refrigerate. Sprinkle the baking powder over the top. Gently fold it throughout. Using a cookie scoop, falafel scoop (or your hands), firmly pack, and roll about 1 ½ tablespoons of batter into a round ball. Add the falafel ball to a spoon before transferring to the hot oil. Flip and fry until golden brown and crispy.",
       "imageURL": "falafel.jpg",
       "cooktime": "1 hour",
@@ -45,7 +45,7 @@
     },
     {
       "title": "Cheeseburger",
-      "ingredients": "Ground Beef x 21 oz, Salt x 1 1/2 tsp, Pepper x 1 tsp, Buns x 4, Cheese x 8 slices, Pickles x 1 can",
+      "ingredients": "Ground Beef x 21 oz,Salt x 1.5 tsp,Pepper x 1 tsp,Buns x 4,Cheese x 8 slices,Pickles x 1 can",
       "instructions": "Gather the ingredients. Heat a gas grill on high for 10 minutes with the lid closed or prepare a hot charcoal grill fire. Meanwhile, divide 1 1/3 pounds (21 ounces) cold ground beef (80 percent lean) into 4 equal portions and shape the meat into patties that are wider than your buns. Form the patties so there is a depression in the center. Season the burger patties with 1 1/2 teaspoons fine salt and 1 teaspoon freshly ground black pepper on both sides. When the grill is ready, place the burgers over direct heat and let sit without flipping or moving until nicely charred and the patties release easily from the grill grate, 4 to 5 minutes. Flip the burger patties and cook, undisturbed, for 4 to 5 minutes more or until cooked to your liking (use a thermometer if needed: the internal temperature should be 135 F for medium-rare burgers or 145 F for medium).",
       "imageURL": "burger.jpg",
       "cooktime": "30 minutes",

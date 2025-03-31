@@ -17,6 +17,8 @@ void main() {
 }
 
 class RootWidget extends StatefulWidget {
+  const RootWidget({super.key});
+
   @override
   _RootWidgetState createState() => _RootWidgetState();
 }
@@ -451,7 +453,7 @@ class _RecipeListView extends StatelessWidget {
 class _RecipeCard extends StatefulWidget {
   final Map<String, dynamic> recipe;
   final VoidCallback onFavoriteChanged;
-  const _RecipeCard({Key? key, required this.recipe, required this.onFavoriteChanged}) : super(key: key);
+  const _RecipeCard({required this.recipe, required this.onFavoriteChanged});
 
   @override
   State<_RecipeCard> createState() => _RecipeCardState();
@@ -559,7 +561,7 @@ class MealPlanner extends StatefulWidget {
 
 class _MealPlannerState extends State<MealPlanner> {
   late DateTime _currentDate;
-  Map<DateTime, List<String>> _items = {};
+  final Map<DateTime, List<String>> _items = {};
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
 
@@ -592,9 +594,7 @@ class _MealPlannerState extends State<MealPlanner> {
     final plans = await dbHelper.getRecipesForDay(DateFormat('yyyy-MM-dd').format(date));
     for (var plan in plans) {
       final title = await dbHelper.getTitleFromID(plan[DatabaseHelper.columnRecipeId]);
-      if (!items.contains(title)) {
-        items.add(title);
-      }
+      items.add(title);
     }
     return items;
   }
@@ -617,7 +617,7 @@ class _MealPlannerState extends State<MealPlanner> {
       builder: (context) => SimpleDialog(
         title: Text('Select a Recipe for ${DateFormat('EEEE').format(date)}', textAlign: TextAlign.center),
         children: [
-          Container(
+          SizedBox(
             width: double.maxFinite,
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _recipesFuture,
@@ -840,111 +840,170 @@ class ShoppingList extends StatefulWidget {
   State<ShoppingList> createState() => _ShoppingListState();
 }
 
-class _ShoppingListState extends State<ShoppingList> {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  List<Map<String, dynamic>> _ingredients = [];
-  bool _isLoading = true;
-  String? _errorMessage;
+  class IngredientParser {
+    static final _quantityRegex = RegExp(r'^\s*((?:\d+\s+\d+\/\d+|\d+\/\d+|\d+\.?\d*|\.\d+))\s*([a-zA-Z].*)?$', caseSensitive: false);
+    
+    static ParsedIngredient? parse(String ingredient) {
+      try {
+        final parts = ingredient.split(RegExp(r'\s*x\s*', caseSensitive: false));
+        if (parts.length != 2) return null;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadIngredients();
+        final name = parts[0].trim();
+        final quantityUnit = parts[1].trim();
+        
+        final match = _quantityRegex.firstMatch(quantityUnit);
+        if (match == null) return null;
+
+        final quantityStr = match.group(1);
+        final unit = match.group(2)?.trim() ?? '';
+
+        if (quantityStr == null) return null;
+
+        final quantity = double.tryParse(quantityStr) ?? 0.0;
+
+
+        return ParsedIngredient(
+          name: name,
+          quantity: quantity,
+          unit: unit,
+        );
+      } catch (e) {
+        return null;
+      }
+    }
   }
 
-  Future<void> _loadIngredients() async {
-    try {
-    await _dbHelper.init();
-    final mealPlans = await _dbHelper.getAllMealPlans();
-    final ingredientsMap = <String, int>{};
-    print('Fetched ${mealPlans.length} meal plans');
+  class ParsedIngredient {
+    final String name;
+    final double quantity;
+    final String unit;
 
-    for (final mealPlan in mealPlans) {
-      final recipe = await _dbHelper.getRecipeById(mealPlan[DatabaseHelper.columnRecipeId]);
-      if (recipe == null) continue;
+    ParsedIngredient({
+      required this.name,
+      required this.quantity,
+      required this.unit,
+    });
+  }
+
+  class _ShoppingListState extends State<ShoppingList> {
+    final DatabaseHelper _dbHelper = DatabaseHelper();
+    List<Map<String, dynamic>> _ingredients = [];
+
+    @override
+    void initState() {
+      super.initState();
+      _loadIngredients();
+    }
+
+    String _formatQuantity(double quantity) {
+    
+    return quantity.toStringAsFixed(2);
+  }
+
+    Future<void> _loadIngredients() async {
+      try {
+      await _dbHelper.init();
+      final mealPlans = await _dbHelper.getAllMealPlans();
+      final ingredientsMap = <String, ParsedIngredient>{};
+
+      for (final mealPlan in mealPlans) {
+        final recipe = await _dbHelper.getRecipeById(mealPlan[DatabaseHelper.columnRecipeId]);
+        if (recipe == null) {
+          continue;
+        }
 
         final ingredientsString = recipe[DatabaseHelper.columnIngredients];
-
-        if (ingredientsString is !String) continue;
-        
-        ingredientsString
+        final ingredients = ingredientsString
           .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .forEach((ingredient) {
-            ingredientsMap[ingredient] = (ingredientsMap[ingredient] ?? 0) + 1;
-          });
-    }
+          .toList();
 
-    setState(() {
-      _ingredients = ingredientsMap.entries.map((entry) {
-        return {
-          'name': entry.key,
-          'count': entry.value > 1 ? '(${entry.value}x)' : '',
-          'checked': false
-        };
-      }).toList();
-      _isLoading = false;
-    });
-    } catch (e) {
+
+        for (final ingredient in ingredients) {
+          final parsed = IngredientParser.parse(ingredient);
+          if (parsed == null) {
+            continue;
+          }
+
+
+          final key = '${parsed.name} (${parsed.unit})';
+          if (ingredientsMap.containsKey(key)) {
+            ingredientsMap[key] = ParsedIngredient(
+              name: parsed.name,
+              quantity: ingredientsMap[key]!.quantity + parsed.quantity,
+              unit: parsed.unit,
+            );
+          } else {
+            ingredientsMap[key] = parsed;
+          }
+        }
+      }
+
       setState(() {
-        _errorMessage = 'Failed to load ingredients: ${e.toString()}';
-        _isLoading = false;
+        _ingredients = ingredientsMap.entries.map((entry) {
+          final parsed = entry.value;
+          return {
+            'name': parsed.name,
+            'quantity': '${_formatQuantity(parsed.quantity)} ${parsed.unit}',
+            'checked': false
+          };
+        }).toList().cast<Map<String, dynamic>>();
       });
+      } catch (e) {
+        print(e);
+      }
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xFF105068),
-        title: Text("Shopping List", style: TextStyle(color:Colors.white)),
-      ),
-      body: _ingredients.isEmpty 
-      ? SizedBox.expand(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Text(
-              "Please add recipes into your meal planner to generate a shopping list.",
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Color(0xFF105068),
+          title: Text("Shopping List", style: TextStyle(color:Colors.white)),
+        ),
+        body: _ingredients.isEmpty 
+        ? SizedBox.expand(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                "Please add recipes into your meal planner to generate a shopping list.",
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ),
-      )
-      : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _ingredients.length,
-        itemBuilder: (context, index) {
-          final ingredient = _ingredients[index];
-          return CheckboxListTile(
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(ingredient['name']),
-                ),
-                Text(
-                  ingredient['count'],
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
+        )
+        : ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: _ingredients.length,
+          itemBuilder: (context, index) {
+            final ingredient = _ingredients[index];
+            return CheckboxListTile(
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(ingredient['name']),
                   ),
-                ),
-              ],
-            ),
-            value: ingredient['checked'],
-            onChanged: (bool? value) {
-              setState(() {
-                _ingredients[index]['checked'] = value ?? false;
-              });
-            },
-            controlAffinity: ListTileControlAffinity.leading,
-            activeColor: Color(0xFF105068),
-          );
-        },
-      ),
-    );
+                  Text(
+                    ingredient['quantity'],
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              value: ingredient['checked'],
+              onChanged: (bool? value) {
+                setState(() {
+                  _ingredients[index]['checked'] = value ?? false;
+                });
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: Color(0xFF105068),
+            );
+          },
+        ),
+      );
+    }
   }
-}

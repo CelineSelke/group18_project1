@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 import 'package:intl/intl.dart';
 
@@ -11,6 +10,7 @@ void main() {
         '/recipeBook': (context) => const RecipeBook(title: 'Recipes'),
         '/favoritesList': (context) => const FavoriteList(),
         '/mealPlanner': (context) => MealPlanner(title: 'Meal Planner'),
+        '/shoppingList': (context) => const ShoppingList()
       },
     ),
   );
@@ -26,8 +26,9 @@ class _RootWidgetState extends State<RootWidget> {
 
   final List<Widget> _screens = [
     const RecipeBook(title: 'Recipe Book'),
+    const FavoriteList(),
     const MealPlanner(title: 'Meal Planner'),
-    const FavoriteList()
+    const ShoppingList()
   ];
 
   @override
@@ -83,18 +84,23 @@ class AppFooter extends StatelessWidget {
             onPressed: () => onTabTapped(0),
           ),
           IconButton(
-            onPressed: () => onTabTapped(2), 
+            onPressed: () => onTabTapped(1), 
             icon: Icon(Icons.favorite, 
-                color: currentIndex == 2 ? Colors.amber : Colors.white, 
+                color: currentIndex == 1 ? Colors.amber : Colors.white, 
                 size: 35)
           ),
           IconButton(
             icon: Icon(Icons.calendar_month, 
-                color: currentIndex == 1 ? Colors.amber : Colors.white, 
+                color: currentIndex == 2 ? Colors.amber : Colors.white, 
                 size: 35),
-            onPressed: () => onTabTapped(1),
+            onPressed: () => onTabTapped(2),
           ),
-          Icon(Icons.shopping_cart, color: Colors.white, size: 35),
+          IconButton(
+            icon: Icon(Icons.shopping_cart, 
+                color: currentIndex == 3 ? Colors.amber : Colors.white, 
+                size: 35),
+            onPressed: () => onTabTapped(3),
+          ),
         ],
       ),
     );
@@ -166,13 +172,22 @@ class _RecipeDetailState extends State<RecipeDetail> {
             ),
             const SizedBox(height: 12),
             Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Ingredients", style: TextStyle(fontSize: 28)),
+                Center(child: Text("Ingredients", style: TextStyle(fontSize: 28)),),
                 SizedBox(height: 4),
-                Text(recipe[DatabaseHelper.columnIngredients], style: TextStyle(fontSize: 16)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: recipe[DatabaseHelper.columnIngredients]
+                      .split(',') 
+                      .map<Widget>((ingredient) => Text(
+                            '• ${ingredient.trim()}',
+                            style: TextStyle(fontSize: 16),
+                          ))
+                      .toList(),
+                ),
                 SizedBox(height: 12),
-                Text("Directions", style: TextStyle(fontSize: 28)),
+                Center(child: Text("Directions", style: TextStyle(fontSize: 28))),
                 SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -218,6 +233,13 @@ class _RecipeBookState extends State<RecipeBook> {
       }
       return matches;
     }).toList();
+  }
+
+  Future<void> _refreshRecipes() async {
+    final updatedRecipes = await dbHelper.queryAllRecipes();
+    setState(() {
+      _recipesFuture = Future.value(updatedRecipes);
+    });
   }
 
 
@@ -317,7 +339,7 @@ class _RecipeBookState extends State<RecipeBook> {
                   );
                 }
                 
-                return _RecipeListView(recipes: filteredRecipes);
+                return _RecipeListView(recipes: filteredRecipes, onRefresh: _refreshRecipes);
               },
             ),
           ),
@@ -340,6 +362,13 @@ class FavoriteList extends StatefulWidget {
 class _FavoriteListState extends State<FavoriteList> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
+
+  Future<void> _refreshRecipes() async {
+    final updatedRecipes = await dbHelper.queryAllRecipes();
+    setState(() {
+      _recipesFuture = Future.value(updatedRecipes);
+    });
+  }
 
   @override
   void initState() {
@@ -392,7 +421,7 @@ class _FavoriteListState extends State<FavoriteList> {
                   );
                 }
                 
-                return _RecipeListView(recipes: filteredRecipes);
+                return _RecipeListView(recipes: filteredRecipes, onRefresh: _refreshRecipes);
               },
             ),
      
@@ -402,7 +431,9 @@ class _FavoriteListState extends State<FavoriteList> {
 
 class _RecipeListView extends StatelessWidget {
   final List<Map<String, dynamic>> recipes;
-  const _RecipeListView({required this.recipes});
+  final VoidCallback onRefresh;
+
+  const _RecipeListView({required this.recipes, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -410,51 +441,57 @@ class _RecipeListView extends StatelessWidget {
       itemCount: recipes.length,
       itemBuilder: (context, index) {
         final recipe = recipes[index];
-        return _RecipeCard(recipe: recipe);
+        return _RecipeCard(recipe: recipe, onFavoriteChanged: onRefresh);
       },
     );
   }
 }
 
-class _FavoriteListView extends StatelessWidget {
-  final List<Map<String, dynamic>> recipes;
-  final Function(DateTime, Map<String, dynamic>) onButtonPressed;
-  final DateTime date;
-  
-  const _FavoriteListView({required this.recipes, required this.onButtonPressed, required this.date});
+
+class _RecipeCard extends StatefulWidget {
+  final Map<String, dynamic> recipe;
+  final VoidCallback onFavoriteChanged;
+  const _RecipeCard({Key? key, required this.recipe, required this.onFavoriteChanged}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-
-    final favoriteRecipes = recipes.where((recipe) => 
-      recipe[DatabaseHelper.columnFavorite] == 1).toList();
-    if (favoriteRecipes.isEmpty) {
-      return Center(child: Text("No favorite recipes found"));
-    }
-    return ListView.builder(
-      itemCount: favoriteRecipes.length,
-      itemBuilder: (context, index) {
-        final recipe = favoriteRecipes[index];
-          return Row(children: [
-            recipe[DatabaseHelper.columnTitle],
-            recipe[DatabaseHelper.columnCookTime],
-            IconButton(
-                icon: Icon(Icons.my_library_add),
-                onPressed: () {
-                  onButtonPressed(date, recipe);
-                },
-            ),
-          ],
-          );
-        }
-      
-    );
-  }
+  State<_RecipeCard> createState() => _RecipeCardState();
 }
 
-class _RecipeCard extends StatelessWidget {
-  final Map<String, dynamic> recipe;
-  const _RecipeCard({required this.recipe});
+class _RecipeCardState extends State<_RecipeCard> {
+  late bool _isFavorite;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.recipe[DatabaseHelper.columnFavorite] == 1;
+    _initializeDb();
+  }
+
+  Future<void> _initializeDb() async {
+    await _dbHelper.init();
+  }
+
+  Future<void> _toggleFavorite() async {
+    final newValue = !_isFavorite;
+    
+    try {
+      await _dbHelper.updateFavoriteStatus(
+        widget.recipe[DatabaseHelper.columnId],
+        newValue ? 1 : 0
+      );
+      
+      setState(() {
+        _isFavorite = newValue;
+      });
+      
+      widget.onFavoriteChanged();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update favorite status'))
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,28 +510,22 @@ class _RecipeCard extends StatelessWidget {
             child: _buildImage(),
           ),
           title: Text(
-            recipe[DatabaseHelper.columnTitle],
+            widget.recipe[DatabaseHelper.columnTitle],
             style: const TextStyle(color: Colors.white),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            "Cook Time: ${recipe[DatabaseHelper.columnCookTime]}",
+            "Cook Time: ${widget.recipe[DatabaseHelper.columnCookTime]}",
             style: const TextStyle(color: Colors.white70),
           ),
           trailing: IconButton(
-            onPressed: () async {
-              final newFavoriteValue = recipe[DatabaseHelper.columnFavorite] == 0 ? 1 : 0;
-
-              await DatabaseHelper().updateFavoriteStatus(recipe[DatabaseHelper.columnId], newFavoriteValue);
-
-
-            },
-            icon: Icon(Icons.favorite, color: recipe[DatabaseHelper.columnFavorite] == 0 ? Colors.white : Colors.red, size: 50)
+            onPressed: _toggleFavorite,
+            icon: Icon(Icons.favorite, color: _isFavorite ? Colors.pink : Colors.white, size: 50)
           ),
           onTap: () {
             Navigator.push(context, MaterialPageRoute(
-              builder: (context) => RecipeDetail(title: recipe[DatabaseHelper.columnTitle], recipe: recipe)
+              builder: (context) => RecipeDetail(title: widget.recipe[DatabaseHelper.columnTitle], recipe: widget.recipe)
             ));
           },
         ),
@@ -509,7 +540,7 @@ class _RecipeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         image: DecorationImage(
-          image: AssetImage('assets/images/${recipe[DatabaseHelper.columnImageURL]}'),
+          image: AssetImage('assets/images/${widget.recipe[DatabaseHelper.columnImageURL]}'),
           fit: BoxFit.cover,
         ),
       ),
@@ -529,7 +560,6 @@ class MealPlanner extends StatefulWidget {
 class _MealPlannerState extends State<MealPlanner> {
   late DateTime _currentDate;
   Map<DateTime, List<String>> _items = {};
-  final TextEditingController _textController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
   late Future<List<Map<String, dynamic>>> _recipesFuture;
 
@@ -560,14 +590,10 @@ class _MealPlannerState extends State<MealPlanner> {
   Future<List<String>> getMealsForDay(DateTime date) async {
     List<String> items = [];
     final plans = await dbHelper.getRecipesForDay(DateFormat('yyyy-MM-dd').format(date));
-    print('Plans for $date: $plans');
-
     for (var plan in plans) {
-      print("");
       final title = await dbHelper.getTitleFromID(plan[DatabaseHelper.columnRecipeId]);
       if (!items.contains(title)) {
         items.add(title);
-        print("date $date title $title");
       }
     }
     return items;
@@ -735,7 +761,19 @@ class _MealPlannerState extends State<MealPlanner> {
                     ),
                     IconButton(
                       icon: Icon(Icons.calendar_today),
-                      onPressed: () {},
+                      onPressed: () async {
+                          final DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        ); 
+                        if (pickedDate != null) {
+                          setState(() {
+                            _currentDate = pickedDate;
+                          });
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -789,6 +827,123 @@ class _MealPlannerState extends State<MealPlanner> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ShoppingList extends StatefulWidget {
+
+  const ShoppingList({super.key});
+
+  @override
+  State<ShoppingList> createState() => _ShoppingListState();
+}
+
+class _ShoppingListState extends State<ShoppingList> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Map<String, dynamic>> _ingredients = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIngredients();
+  }
+
+  Future<void> _loadIngredients() async {
+    try {
+    await _dbHelper.init();
+    final mealPlans = await _dbHelper.getAllMealPlans();
+    final ingredientsMap = <String, int>{};
+    print('Fetched ${mealPlans.length} meal plans');
+
+    for (final mealPlan in mealPlans) {
+      final recipe = await _dbHelper.getRecipeById(mealPlan[DatabaseHelper.columnRecipeId]);
+      if (recipe == null) continue;
+
+        final ingredientsString = recipe[DatabaseHelper.columnIngredients];
+
+        if (ingredientsString is !String) continue;
+        
+        ingredientsString
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .forEach((ingredient) {
+            ingredientsMap[ingredient] = (ingredientsMap[ingredient] ?? 0) + 1;
+          });
+    }
+
+    setState(() {
+      _ingredients = ingredientsMap.entries.map((entry) {
+        return {
+          'name': entry.key,
+          'count': entry.value > 1 ? '(${entry.value}x)' : '',
+          'checked': false
+        };
+      }).toList();
+      _isLoading = false;
+    });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load ingredients: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFF105068),
+        title: Text("Shopping List", style: TextStyle(color:Colors.white)),
+      ),
+      body: _ingredients.isEmpty 
+      ? SizedBox.expand(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              "Please add recipes into your meal planner to generate a shopping list.",
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      )
+      : ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _ingredients.length,
+        itemBuilder: (context, index) {
+          final ingredient = _ingredients[index];
+          return CheckboxListTile(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(ingredient['name']),
+                ),
+                Text(
+                  ingredient['count'],
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            value: ingredient['checked'],
+            onChanged: (bool? value) {
+              setState(() {
+                _ingredients[index]['checked'] = value ?? false;
+              });
+            },
+            controlAffinity: ListTileControlAffinity.leading,
+            activeColor: Color(0xFF105068),
+          );
+        },
       ),
     );
   }

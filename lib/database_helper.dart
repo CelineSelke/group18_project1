@@ -208,4 +208,19 @@ class DatabaseHelper {
   Future<void> clearTable(String tableName) async {
     await _db.delete(tableName); 
   }
+
+  Future<List<Map<String, dynamic>>> getAllMealPlans() async {
+    await _initialization;
+    return await _db.query(tableMealPlan);
+  }
+
+  Future<Map<String, dynamic>?> getRecipeById(int id) async {
+    await _initialization;
+    final result = await _db.query(
+      table,
+      where: '$columnId = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
 }

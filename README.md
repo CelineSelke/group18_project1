@@ -1,16 +1,6 @@
-# group18_project1
+# Mobile App Development Group 18 Project 1
+### Celine Selke and David Xia
 
-A new Flutter project.
+A Recipe and Meal Plannig App that allows users to filter by dietary restrictions, save favorited recipes, and save specific meals to a weekly meal plan
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+[Presentation](https://www.youtube.com/watch?v=VNvYlXBYZ1s&ab_channel=MADGroup18)
